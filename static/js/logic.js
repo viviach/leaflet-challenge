@@ -7,14 +7,15 @@ d3.json(queryUrl).then(function(data) {
   console.log (data)
 
   function markerSize(magnitude) {
-    return magnitude *50;
+    return magnitude *5;
   }
   var EarthquakeMarkers = [];
+  // var markers=L.layerGroup();
   // Loop through locations and create city and state markers
-  for (var i = 0; i < data.length; i++) {
+  for (var i = 0; i < data.features.length; i++) {
     // Setting the marker radius for the state by passing population into the markerSize function
       EarthquakeMarkers.push(
-        L.circle(data.features[i].geometry.coordinates, {
+        L.circleMarker([data.features[i].geometry.coordinates[1],data.features[i].geometry.coordinates[0]], {
           stroke: false,
           fillOpacity: 0.75,
           color: "red",
@@ -23,7 +24,9 @@ d3.json(queryUrl).then(function(data) {
         })
      );
     }
-
+    // console.log(markers)
+  
+    console.log(EarthquakeMarkers)
     var markers = L.layerGroup(EarthquakeMarkers);
 
     var satmap = L.tileLayer("https://api.mapbox.com/styles/v1/mapbox/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}", {
@@ -65,7 +68,7 @@ d3.json(queryUrl).then(function(data) {
         zoom: 3,
         layers: [outmap, markers]
       });
-    
+    markers.addTo(myMap)
       // Create a layer control
       // Pass in our baseMaps and overlayMaps
       // Add the layer control to the map

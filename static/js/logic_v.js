@@ -4,27 +4,17 @@ var queryUrl = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_we
 // Perform a GET request to the query URL
 d3.json(queryUrl).then(function(data) {
   // Once we get a response, send the data.features object to the createFeatures function
-  console.log (data)
-  createFeatures(data.features);
-  var EarthquakeMarkers = [];
-// Loop through locations and create city and state markers
-  for (var i = 0; i < data.length; i++) {
-  // Setting the marker radius for the state by passing population into the markerSize function
-    EarthquakeMarkers.push(
-      L.circle(data[i].feature.geometry.coordinates, {
-        stroke: false,
-        fillOpacity: 0.75,
-        color: "white",
-        fillColor: "white",
-        radius: data[i].feature.mag
-      })
-   );
+  console.log (data);
+  d3.json("https://raw.githubusercontent.com/fraxen/tectonicplates/master/GeoJSON/PB2002_boundaries.json").then(function(plates){
+    createFeatures(data.features, plates);
   }
-  var markers = L.layerGroup(EarthquakeMarkers);
+  )
+
+  
 });
 
 
-function createFeatures(earthquakeData) {
+function createFeatures(earthquakeData, platesdata) {
 
     // Define a function we want to run once for each feature in the features array
     // Give each feature a popup describing the place and time of the earthquake
@@ -32,18 +22,68 @@ function createFeatures(earthquakeData) {
       layer.bindPopup("<h3>" + feature.properties.place +
         "</h3><hr><p>" + feature.properties.mag + "</p>");
     };
+
+    function styleMarker(features){
+      return {
+        stroke: false,
+        weight: 1,
+        color: "white",
+        opacity: 0.7,
+        fillColor: depthcolor(features.geometry.coordinates[2]),
+        fillOpacity: 0.7,
+        radius: magsize(features.properties.mag)
+      }
+    }
   
+    function depthcolor(depth){
+      if (depth>90){
+        return "red"
+      }
+      else if (depth >70) {
+        return "tomato"
+      }
+      else if (depth>50){
+        return "orange"
+      }
+      else if (depth>30){
+        return "yellow"
+      }
+      else if (depth>10){
+        return "yellowgreen"
+      }
+      else {
+      return "green"
+      }
+    }
+
+    function magsize(magnitude){
+      if (magnitude==0){
+        return 1
+      }
+      else {
+        return magnitude*3
+      }
+    }
     // Create a GeoJSON layer containing the features array on the earthquakeData object
     // Run the onEachFeature function once for each piece of data in the array
     var earthquakes = L.geoJSON(earthquakeData, {
+      pointToLayer: function(feature,coord){
+        return L.circleMarker(coord);
+      },
+      style: styleMarker,
       onEachFeature: popup
     });
+
+    var plates= L.geoJSON(platesdata,{
+      color: "blue",
+      weight: 2
+    })
   
     //Sending our earthquakes layer to the createMap function
-    createMap(earthquakes);
+    createMap(earthquakes, plates);
 }
 
-function createMap(earthquakes) {
+function createMap(earthquakes, plates) {
 
     // Define streetmap and darkmap layers
     var satmap = L.tileLayer("https://api.mapbox.com/styles/v1/mapbox/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}", {
@@ -74,21 +114,18 @@ function createMap(earthquakes) {
       "Light Map" : lightmap
     };
   
-
-
-
-
     // Create overlay object to hold our overlay layer
     var overlayMaps = {
       Earthquakes: earthquakes,
-      markers: markers 
+      Plates: plates
+      
     };
   
     // Create our map, giving it the streetmap and earthquakes layers to display on load
     var myMap = L.map("mapid", {
       center: [0,0],
       zoom: 3,
-      layers: [satmap, earthquakes, markers]
+      layers: [satmap, earthquakes, plates]
     });
   
     // Create a layer control
